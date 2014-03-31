@@ -7,10 +7,22 @@
 *.ruby-version
 *.db
 *.zip
+.svn/
+.sftppass
+
 #OSX系统下忽略
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
 
 #忽略以下文件夹
 .sass-cache/
 node_modules/
 build/
+
+#忽略idea工程结构文件
+.idea/
+*.ipr
+*.iws
+*.iml
