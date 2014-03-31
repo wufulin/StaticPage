@@ -16,16 +16,46 @@ module.exports=function(grunt){
         // 清理掉开发时才需要的文件
         clean: {
             pre: ['dist/', 'build/'], // 删除掉先前的开发文件
-            post: ['<%= archive_name %>*.zip'] // 先删除先前生成的压缩包
+            post: ['<%= pkg.name %>*.zip'] // 先删除先前生成的压缩包
         },
 
+        // 检查 js
+        jshint: {
+            files: ['gruntfile.js', '<%= paths.js %>/**/*.js'],
+            options: {
+                //这里是覆盖JSHint默认配置的选项
+                globals: {
+                    jQuery: true,
+                    console: true,
+                    module: true,
+                    document: true
+                }
+            }
+        },
+
+        // 合并 js
+        concat: {
+            options: {
+                separator: ';',
+                stripBanners: true
+            },
+            dist: {
+                src: [
+                    "js/base.js",
+                    "js/common.js"
+                ],
+                dest: "assets/js/min.js"
+            }
+        },
+
+        // 压缩 js
         uglify:{
             options:{
                 banner: '/*! <%= pkg.name %> <%= grunt.template.today("yyyy-mm-dd") %> */\n' // js文件打上时间戳
             },
             dist: {
                 files: {
-                    '<%= paths.assets %>/js/min.js': '<%= paths.js %>/base.js'
+                    '<%= paths.assets %>/js/min.js': '<%= paths.assets %>/js/min.js'
                 }
             }
         },
@@ -34,7 +64,7 @@ module.exports=function(grunt){
         compress:{
             main:{
                 options:{
-                    archive:'<%= archive_name %>-<%= grunt.template.today("yyyy") %>年<%= grunt.template.today("mm") %>月<%= grunt.template.today("dd") %>日<%= grunt.template.today("h") %>时<%= grunt.template.today("TT") %>.zip'
+                    archive:'<%= pkg.name %>-<%= grunt.template.today("yyyy") %>年<%= grunt.template.today("mm") %>月<%= grunt.template.today("dd") %>日<%= grunt.template.today("h") %>时<%= grunt.template.today("TT") %>.zip'
                 },
                 expand:true,
                 cwd:'build/',
@@ -49,7 +79,7 @@ module.exports=function(grunt){
                     {expand: true, src: ['assets/css/**'], dest: 'build/'},
                     {expand: true, src: ['assets/images/**'], dest: 'build/'},
                     {expand: true, src: ['assets/js/**'], dest: 'build/'},
-                    {expand: true, src: ['*', '!.gitignore', '!.DS_Store','!Gruntfile.js','!package.json','!node_modules/**','!<%= archive_name %>*.zip'], dest: 'build/'}
+                    {expand: true, src: ['*', '!README.md', '!css/**', '!js/**', '!img/**', '!.gitignore', '!.DS_Store','!Gruntfile.js','!package.json','!node_modules/**','!<%= pkg.name %>*.zip'], dest: 'build/'}
                 ]
             },
 
@@ -64,7 +94,7 @@ module.exports=function(grunt){
 
             archive:{
                 files:[
-                    {expand: true, src: ['<%= archive_name %>.zip'], dest: 'dist/'}
+                    {expand: true, src: ['<%= pkg.name %>.zip'], dest: 'dist/'}
                 ]
             }
         },
@@ -114,27 +144,27 @@ module.exports=function(grunt){
             },
             js:{
                 files:'<%= paths.js %>/**/*.js',
-                tasks:['uglify']
+                tasks:['jshint', 'concat', 'uglify']
             },
             //若不使用Sass，可通过grunt watch:base 只监测style.css和js文件
             base:{
                 files:['<%= paths.css %>/**/*.css','<%= paths.js %>/**/*.js','img/**'],
-                tasks:['cssmin','uglify','copy:images']
+                tasks:['cssmin','jshint', 'concat', 'uglify','copy:images']
             }
 
         },
 
-        // 发布到FTP服务器 : 请注意密码安全，sftp的帐号密码保存在主目录 .sftppass 文件
+        // 发布到FTP服务器 : 请注意密码安全，sftp的帐号密码保存在主目录 .ftppass 文件
         'sftp-deploy':{
             build: {
                 auth: {
                     host: '192.168.11.42',
                     port: 32200,
-                    authKey: 'gzwufulin'
+                    authKey: 'private'
                 },
                 src: 'build',
-                dest: '',
-                exclusions: ['path/to/source/folder/**/.DS_Store', 'path/to/source/folder/**/Thumbs.db', 'path/to/dist/tmp']
+                dest: '/home/gzwufulin/htdocs/livehall',
+                exclusions: ['build/**/.DS_Store', 'build/**/Thumbs.db']
             }
         }
     });
@@ -145,16 +175,18 @@ module.exports=function(grunt){
     });
 
     grunt.loadNpmTasks('grunt-contrib-clean');    // 加载包含 "clean" 任务的插件
+    grunt.loadNpmTasks('grunt-contrib-concat');    // 加载包含 "clean" 任务的插件
     grunt.loadNpmTasks('grunt-contrib-compress'); // 加载包含 "compress" 任务的插件
     grunt.loadNpmTasks('grunt-contrib-copy');     // 加载包含 "copy" 任务的插件
     grunt.loadNpmTasks('grunt-contrib-cssmin');   // 加载包含 "cssmin" 任务的插件
+    grunt.loadNpmTasks('grunt-contrib-jshint');   // 加载包含 "jshint" 任务的插件
     grunt.loadNpmTasks('grunt-contrib-watch');    // 加载包含 "watch" 任务的插件
     grunt.loadNpmTasks('grunt-contrib-uglify');   // 加载包含 "uglify" 任务的插件
     grunt.loadNpmTasks('grunt-contrib-htmlmin');  // 加载包含 "htmlmin" 任务的插件
     grunt.loadNpmTasks('grunt-sftp-deploy');      // 加载包含 "sftp-deploy" 任务的插件
 
     // 默认被执行的任务列表
-    grunt.registerTask('default', ['cssmin','uglify','htmlmin','copy:images']);
+    grunt.registerTask('default', ['jshint', 'concat', 'cssmin','uglify','copy:images']);
     // 执行 grunt build --最终输出的文件 < name-生成日期.zip > 文件
     grunt.registerTask('build', ['clean:pre','copy:images', 'copy:main','cssmin','copy:archive', 'clean:post','htmlmin','compress']);
     // 执行 grunt publish 可以直接上传项目文件到指定服务器FTP目录
